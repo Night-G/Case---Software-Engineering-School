@@ -1,14 +1,21 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+
+	_ "github.com/microsoft/go-mssqldb"
 )
 
 // exchange rate
 const nbuAPI = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode=USD&json"
+
+type Entity struct {
+	email string
+}
 
 type ExchangeRate struct {
 	Rate float32 `json:"rate"`
@@ -50,6 +57,21 @@ func rateHandler(w http.ResponseWriter, r *http.Request) {
 func subscribeHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	email := q.Get("email")
+	fmt.Fprintf(w, email)
+
+	db, err := sql.Open("mssql", "server=SoftwareEngineeringSchool ;user id=root;password=root")
+	defer db.Close()
+
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	_, err = db.Exec(`INSERT INTO emails(email) VALUES ($1)`, email)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
 }
 
 func main() {
