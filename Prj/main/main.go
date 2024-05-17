@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	_ "github.com/microsoft/go-mssqldb"
 	"log"
 	"net/http"
-
-	_ "github.com/microsoft/go-mssqldb"
+	"os"
 )
 
 // exchange rate
@@ -53,13 +53,13 @@ func rateHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "1 USD = %.2f UAH", rate)
 }
 
-// handle /subscribe?email= ' '
+// handle  /subscribe-> /subscribe?email= ' '
 func subscribeHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	email := q.Get("email")
 	fmt.Fprintf(w, email)
 
-	db, err := sql.Open("mssql", "server=SoftwareEngineeringSchool ;user id=root;password=root")
+	db, err := sql.Open("mssql", "server=DESKTOP-LMCD5AI ;user id=root;password=root")
 	defer db.Close()
 
 	if err != nil {
@@ -74,10 +74,39 @@ func subscribeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handle /subscribe for file  -> /subscribe/file?email= <email>
+func subscribeInFileHandler(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	email := q.Get("email")
+	fmt.Fprintf(w, email)
+
+	var f *os.File
+	var err error
+	if _, err := os.Stat("./test.txt"); err != nil {
+		f, err = os.Create("test.txt")
+
+	}
+
+	_, err = f.WriteString(email)
+	if err != nil {
+		fmt.Println(err)
+		f.Close()
+		return
+	}
+
+	err = f.Close()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+}
+
 func main() {
 	http.HandleFunc("/rate", rateHandler)
 
 	http.HandleFunc("/subscribe", subscribeHandler)
+
+	http.HandleFunc("/subscribe/file", subscribeInFileHandler)
 
 	//run
 	log.Fatal(http.ListenAndServe(":8080", nil))
