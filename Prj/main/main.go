@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 // exchange rate
@@ -74,31 +76,60 @@ func subscribeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// check file txt for the same row
+func checkEmail(fileName string, email string) (isPresent bool, err error) {
+	file, err := os.Open(fileName)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return true, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	found := false
+	for scanner.Scan() {
+		if strings.Contains(scanner.Text(), email) {
+			found = true
+			break
+		}
+	}
+
+	return found, err
+}
+
 // handle /subscribe for file  -> /subscribe/file?email= <email>
 func subscribeInFileHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	email := q.Get("email")
 	fmt.Fprintf(w, email)
 
-	var f *os.File
-	var err error
-	if _, err := os.Stat("./test.txt"); err != nil {
-		f, err = os.Create("test.txt")
+	fileName := "test.txt"
 
-	}
+	f, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer f.Close()
 
-	_, err = f.WriteString(email)
 	if err != nil {
-		fmt.Println(err)
-		f.Close()
+		log.Fatal(err)
 		return
 	}
 
-	err = f.Close()
+	// if there is no such email already - writes
+	isPresent, err := checkEmail(fileName, email)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 		return
 	}
+	if !isPresent {
+		email += "\n"
+		_, err = f.WriteString(email)
+
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+
 }
 
 func main() {
