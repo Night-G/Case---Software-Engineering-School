@@ -169,9 +169,8 @@ func sendMail(sendTo []string) {
 	}
 }
 
-// sends rate on subscribed emails
-func sendEmailsHandler() {
-
+// send rate on subscribed emails
+func sendEmailsFunc() {
 	//getting emails from db
 	db, err := sql.Open("sqlite3", "dbFile.db")
 	defer db.Close()
@@ -199,6 +198,11 @@ func sendEmailsHandler() {
 	}
 }
 
+func sendEmailsHandler(w http.ResponseWriter, r *http.Request) {
+	sendEmailsFunc()
+
+}
+
 func main() {
 	http.HandleFunc("/rate", rateHandler)
 
@@ -206,11 +210,11 @@ func main() {
 
 	http.HandleFunc("/subscribe/file", subscribeInFileHandler)
 
-	// http.HandleFunc("/sendEmails", sendEmailsHandler) - used for testing purposes
+	http.HandleFunc("/sendEmails", sendEmailsHandler)
 
 	// daily sending usd:UAH rate
 	c := cron.New()
-	_, err := c.AddFunc("@daily", sendEmailsHandler)
+	_, err := c.AddFunc("@daily", sendEmailsFunc)
 	if err != nil {
 		log.Fatal(err)
 	}
