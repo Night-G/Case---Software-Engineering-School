@@ -11,5 +11,8 @@ COPY ./DBmigrations /app/migrations
 
 RUN go build -o main .
 
+ENV ETHEREAL_EMAIL=""
+ENV ETHEREAL_PASSWORD=""
+
 EXPOSE 8080
 CMD ["./main"]

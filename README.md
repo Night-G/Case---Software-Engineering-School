@@ -14,6 +14,8 @@ Sends daily emails to subscribed e-mails with the latest exchange rate
 > To being able to send emails in app should be added following values:
 > * line 145: variable ***apw*** - app password for gmail account, generation example - [link](https://mailmeteor.com/blog/gmail-smtp-settings) 
 > * line 146: variable ***sendingEmail*** - gmail account used for sending emails for which the password is specified in line 145
+>
+> or in Dockerfile enter values in ```ETHEREAL_PASSWORD``` and ```ETHEREAL_EMAIL```
 # Endpoints:
 App runs on ```http://localhost:8080``` 
 1. ```/rate``` - GET request to get a USD-UAH rate from NBU

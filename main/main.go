@@ -142,8 +142,13 @@ func subscribeInFileHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendMail(sendTo []string) {
-	apw := ""          // ---- put created app password from gmail from which sending emails
-	sendingEmail := "" // ---- put gmail from which sending emails
+	apw := os.Getenv("ETHEREAL_PASSWORD")       // app password for gmail, string
+	sendingEmail := os.Getenv("ETHEREAL_EMAIL") // gmail from which sending emails planed, string
+	if apw == "" || sendingEmail == "" {
+		log.Fatal("ETHEREAL_EMAIL or ETHEREAL_PASSWORD is not set")
+		return
+	}
+
 	auth := smtp.PlainAuth("", sendingEmail, apw, "smtp.gmail.com")
 	to := "To: " + sendTo[0] + "\r\n"
 
