@@ -1,10 +1,11 @@
 # Description
 App uses SQLite3 - DB was used via [sqlite browser](https://sqlitebrowser.org/dl/) to create and maintain <br />
-Data to backend sends through url.
+Data to backend sends through url:
 
 >Example of sending data to subscribe email: <br />http://localhost:8080/subscribe?email= **someMail**
 
-Sends daily emails to subscribed e-mails with the latest exchange rate
+
+App sends daily emails to subscribed e-mails with the latest exchange rate
 ## For running locally
 1. Go have to be installed - [link](https://go.dev/doc/install)
 2. gcc have to be installed - [example](https://code.visualstudio.com/docs/cpp/config-mingw#_installing-the-mingww64-toolchain)
