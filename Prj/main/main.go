@@ -5,10 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	_ "github.com/mattn/go-sqlite3"
 	_ "github.com/microsoft/go-mssqldb"
+	"github.com/robfig/cron/v3"
 	"log"
 	"net/http"
+	"net/smtp"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -61,7 +65,7 @@ func subscribeHandler(w http.ResponseWriter, r *http.Request) {
 	email := q.Get("email")
 	fmt.Fprintf(w, email)
 
-	db, err := sql.Open("mssql", "server=DESKTOP-LMCD5AI ;user id=root;password=root")
+	db, err := sql.Open("sqlite3", "dbFile.db")
 	defer db.Close()
 
 	if err != nil {
@@ -69,11 +73,16 @@ func subscribeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = db.Exec(`INSERT INTO emails(email) VALUES ($1)`, email)
-	if err != nil {
-		log.Fatal(err)
-		return
+	// check if in the db already such email if none - write`
+	err = db.QueryRow(`SELECT email FROM emails WHERE email = $1`, email).Scan()
+	if err == sql.ErrNoRows {
+		_, err = db.Exec(`INSERT INTO emails(email) VALUES ($1)`, email)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
 	}
+
 }
 
 // check file txt for the same row
@@ -104,7 +113,7 @@ func subscribeInFileHandler(w http.ResponseWriter, r *http.Request) {
 	email := q.Get("email")
 	fmt.Fprintf(w, email)
 
-	fileName := "test.txt"
+	fileName := "emails.txt"
 
 	f, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	defer f.Close()
@@ -132,12 +141,80 @@ func subscribeInFileHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func sendMail(sendTo []string) {
+	apw := ""          // ---- put created app password from gmail from which sending emails
+	sendingEmail := "" // ---- put gmail from which sending emails
+	auth := smtp.PlainAuth("", sendingEmail, apw, "smtp.gmail.com")
+	to := "To: " + sendTo[0] + "\r\n"
+
+	rateFloat, err := getExchangeRate()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	// float32 to string
+	rate := strconv.FormatFloat(float64(rateFloat), 'f', -1, 32)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	msg := []byte(to + "Subject: Rate\r\n" + rate)
+
+	//sending
+	err = smtp.SendMail("smtp.gmail.com:587", auth, sendingEmail, sendTo, msg)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+}
+
+// sends rate on subscribed emails
+func sendEmailsHandler() {
+
+	//getting emails from db
+	db, err := sql.Open("sqlite3", "dbFile.db")
+	defer db.Close()
+
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	// get all subscribed emails
+	res, err := db.Query(`SELECT email FROM emails`)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	for res.Next() {
+		var sendTo string
+		err = res.Scan(&sendTo)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		sendMail([]string{sendTo})
+	}
+}
+
 func main() {
 	http.HandleFunc("/rate", rateHandler)
 
 	http.HandleFunc("/subscribe", subscribeHandler)
 
 	http.HandleFunc("/subscribe/file", subscribeInFileHandler)
+
+	// http.HandleFunc("/sendEmails", sendEmailsHandler) - used for testing purposes
+
+	// daily sending usd:UAH rate
+	c := cron.New()
+	_, err := c.AddFunc("@daily", sendEmailsHandler)
+	if err != nil {
+		log.Fatal(err)
+	}
+	c.Start()
 
 	//run
 	log.Fatal(http.ListenAndServe(":8080", nil))
