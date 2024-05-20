@@ -1,13 +1,14 @@
-FROM golang:1.22
+FROM golang:1.22-alpine
 
 WORKDIR /app
+
 COPY go.mod go.sum ./
 
 RUN go mod download
 
 COPY . .
 
-COPY ./DBmigrations /app/migrations
+WORKDIR /app/main
 
 RUN go build -o main .
 
